@@ -38,7 +38,7 @@ You may also be interested in WordPress tips and tricks at <a href="http://wpinf
 = How do I send a request to PayPal? =
 
 To send a request to PayPal, simply build the request as an associative array and pass it to the hashCall helper function like this:
-<code lang='php'>
+<code>
 $ppParams = array(
 	'METHOD'			=> 'doDirectPayment',
 	'PAYMENTACTION'		=> 'Sale'
