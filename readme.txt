@@ -4,7 +4,7 @@ Donate link: https://www.paypal.com/cgi-bin/webscr?cmd=_xclick&business=paypal%4
 Tags: paypal
 Requires at least: 2.6
 Tested up to: 2.8.4
-Stable tag: 1.0.0
+Stable tag: 1.0.1
 
 PayPal integration framework and admin interface as well as IPN listener.  Requires PHP5.
 
@@ -41,8 +41,8 @@ To send a request to PayPal, simply build the request as an associative array an
 <code>
 $ppParams = array(
 	'METHOD'			=> 'doDirectPayment',
-	'PAYMENTACTION'		=> 'Sale'
-	'IPADDRESS'			=> '123.123.123.123'
+	'PAYMENTACTION'		=> 'Sale',
+	'IPADDRESS'			=> '123.123.123.123',
 	'AMT'				=> '222.22',
 	'DESC'				=> 'some product',
 	'CREDITCARDTYPE'	=> 'VISA',
@@ -65,6 +65,13 @@ $response = hashCall($ppParams);
 </code>
 
 == Changelog ==
+
+= 1.0.1 =
+* Added sendToExpressCheckout method for sending users to PayPal to finish up Express Checkout Payments
+* Changed hashCall to use the WordPress WP_Http class
+* Changed makeNVP to a public method
+* Updated makeNVP to use http_build_query
+* Switched to using wp_remote_post rather than specifying POST and using wp_remote_request
 
 = 1.0.0 =
 * Original version released to wordpress.org repository

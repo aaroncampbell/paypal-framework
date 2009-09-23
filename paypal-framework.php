@@ -3,7 +3,7 @@
  * Plugin Name: PayPal Framework
  * Plugin URI: http://xavisys.com/2009/09/wordpress-paypal-framework/
  * Description: PayPal integration framework and admin interface as well as IPN listener.  Requires PHP5.
- * Version: 1.0.0
+ * Version: 1.0.1
  * Author: Aaron D. Campbell
  * Author URI: http://xavisys.com/
  */
@@ -138,9 +138,9 @@ class wpPayPalFramework
 		}
 		$defaults = array(
 			'sandbox'			=> 'sandbox',
-			'username-sandbox'	=> 'paypal_1228228249_biz_api1.xavisys.com',
-			'password-sandbox'	=> '1228228260',
-			'signature-sandbox'	=> 'AFcWxV21C7fd0v3bYYYRCpSSRl31AgzL0FRBD5b4.v9.z4UIcBZRSqhs',
+			'username-sandbox'	=> '',
+			'password-sandbox'	=> '',
+			'signature-sandbox'	=> '',
 			'username-live'		=> '',
 			'password-live'		=> '',
 			'signature-live'	=> '',
@@ -496,60 +496,74 @@ class wpPayPalFramework
 			'SIGNATURE'		=> $this->_settings["signature-{$this->_settings['sandbox']}"],
 			'CURRENCYCODE'	=> $this->_settings['currency'],
 		);
-		$req = wp_parse_args( $req, $defaults );
-
-		return $this->_makeNVP($req);
+		return wp_parse_args( $req, $defaults );
 	}
 
-	private function _makeNVP($reqArray) {
+	/**
+	 * Convert an associative array into an NVP string
+	 *
+	 * @param array Associative array to create NVP string from
+	 * @param string[optional] Used to separate arguments (defaults to &)
+	 *
+	 * @return string NVP string
+	 */
+	public function makeNVP( $reqArray, $sep = '&' ) {
 		if ( !is_array($reqArray) ) {
 			return $reqArray;
 		}
-
-		$nvpreq = '';
-		foreach ( $reqArray as $key => $val ) {
-			if ( !empty($nvpreq) ) {
-				$nvpreq .= '&';
-			}
-			$nvpreq .= strtoupper($key) . '=' . urlencode($val);
-		}
-		return $nvpreq;
+		return http_build_query( $reqArray, '', $sep );
 	}
 
 	/**
 	 * hashCall: Function to perform the API call to PayPal using API signature
 	 * @param string|array $args Parameters needed for call
 	 *
-	 * @return array An associtive array containing the response from the server.
+	 * @return array On success return associtive array containing the response from the server.
 	 */
 	public function hashCall( $args ) {
-		//setting the curl parameters.
-		$ch = curl_init();
-		curl_setopt( $ch, CURLOPT_URL, $this->_endpoint[$this->_settings['sandbox']] );
-		curl_setopt( $ch, CURLOPT_VERBOSE, 1 );
+		$params = array(
+			'body'		=> $this->_prepRequest($args),
+			'sslverify' => false,
+			'timeout' 	=> 30,
+		);
 
-		//turning off the server and peer verification(TrustManager Concept).
-		curl_setopt( $ch, CURLOPT_SSL_VERIFYPEER, FALSE );
-		curl_setopt( $ch, CURLOPT_SSL_VERIFYHOST, FALSE );
-
-		//We need to capture what is returned
-		curl_setopt( $ch, CURLOPT_RETURNTRANSFER, 1 );
-		//We need to send via POST.  GET is default
-		curl_setopt( $ch, CURLOPT_POST, 1 );
-
-		// Prep the request and set the defaults, etc and set as post fields
-		$req = $this->_prepRequest($args);
-		curl_setopt( $ch, CURLOPT_POSTFIELDS, $req );
-
-		//getting response from server
-		$response = curl_exec($ch);
-
-		if (!curl_errno($ch)) {
-			//closing the curl
-			curl_close($ch);
+		/**
+		 * @todo Use only wp_remote_post() once we only support 2.7+
+		 */
+		// Send the request
+		if ( !function_exists('wp_remote_post') ) {
+			require_once('http.php');
 		}
+		$resp = wp_remote_post( $this->_endpoint[$this->_settings['sandbox']], $params );
 
-		return wp_parse_args($response);
+		// If the response was valid, decode it and return it.  Otherwise return a WP_Error
+		if ( !is_wp_error($resp) && $resp['response']['code'] >= 200 && $resp['response']['code'] < 300 ) {
+			// Used for debugging.
+			if ( $this->_settings['debugging'] == 'on' && is_email($this->_settings['debugging_email']) ) {
+				wp_mail($this->_settings['debugging_email'], 'PayPal Framework - hashCall sent successfully', "Request:\r\n".print_r($params['body'], true)."\r\n\r\nResponse:\r\n".print_r(wp_parse_args($resp['body']), true));
+			}
+			return wp_parse_args($resp['body']);
+		} else {
+			if ( $this->_settings['debugging'] == 'on' && is_email($this->_settings['debugging_email']) ) {
+				wp_mail($this->_settings['debugging_email'], 'PayPal Framework - hashCall failed', "Request:\r\n".print_r($params['body'], true)."\r\n\r\nResponse:\r\n".print_r($resp, true));
+			}
+			if ( !is_wp_error($resp) ) {
+				$resp = new WP_Error('http_request_failed', $resp['response']['message'], $resp['response']);
+			}
+			return $resp;
+		}
+	}
+
+	/**
+	 * Used to direct the user to the Express Checkout
+	 *
+	 * @param string|array $args Parameters needed for call.  *token is REQUIRED*
+	 */
+	public function sendToExpressCheckout($args) {
+		$args['cmd'] = '_express-checkout';
+		$nvpString = $this->makeNVP($args);
+		wp_redirect($this->_url[$this->_settings['sandbox']] . "?{$nvpString}");
+		exit;
 	}
 
 	/**
@@ -569,6 +583,9 @@ class wpPayPalFramework
 		}
 	}
 
+	/**
+	 * Get the PayPal URL based on current setting for sandbox vs live
+	 */
 	public function getUrl() {
 		return $this->_url[$this->_settings['sandbox']];
 	}
@@ -583,7 +600,6 @@ class wpPayPalFramework
 
 		// We need to send the message back to PayPal just as we received it
 		$params = array(
-			'method' => 'POST',
 			'body' => $_POST
 		);
 
@@ -591,10 +607,10 @@ class wpPayPalFramework
 		 * @todo Use only wp_remote_post() once we only support 2.7+
 		 */
 		// Send the request
-		if ( !function_exists('wp_remote_request') ) {
+		if ( !function_exists('wp_remote_post') ) {
 			require_once('http.php');
 		}
-		$resp = wp_remote_request( $this->_url[$this->_settings['sandbox']], $params );
+		$resp = wp_remote_post( $this->_url[$this->_settings['sandbox']], $params );
 
 		// Put the $_POST data back to how it was so we can pass it to the action
 		unset($_POST['cmd']);
