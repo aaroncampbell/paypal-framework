@@ -138,9 +138,9 @@ class wpPayPalFramework
 		}
 		$defaults = array(
 			'sandbox'			=> 'sandbox',
-			'username-sandbox'	=> 'paypal_1228228249_biz_api1.xavisys.com',
-			'password-sandbox'	=> '1228228260',
-			'signature-sandbox'	=> 'AFcWxV21C7fd0v3bYYYRCpSSRl31AgzL0FRBD5b4.v9.z4UIcBZRSqhs',
+			'username-sandbox'	=> '',
+			'password-sandbox'	=> '',
+			'signature-sandbox'	=> '',
 			'username-live'		=> '',
 			'password-live'		=> '',
 			'signature-live'	=> '',

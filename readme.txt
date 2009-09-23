@@ -41,8 +41,8 @@ To send a request to PayPal, simply build the request as an associative array an
 <code>
 $ppParams = array(
 	'METHOD'			=> 'doDirectPayment',
-	'PAYMENTACTION'		=> 'Sale'
-	'IPADDRESS'			=> '123.123.123.123'
+	'PAYMENTACTION'		=> 'Sale',
+	'IPADDRESS'			=> '123.123.123.123',
 	'AMT'				=> '222.22',
 	'DESC'				=> 'some product',
 	'CREDITCARDTYPE'	=> 'VISA',
