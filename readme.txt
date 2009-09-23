@@ -37,32 +37,30 @@ You may also be interested in WordPress tips and tricks at <a href="http://wpinf
 
 = How do I send a request to PayPal? =
 
-Simply build the request as an associative array like this:
+To send a request to PayPal, simply build the request as an associative array and pass it to the hashCall helper function like this:
 <code>
-	$ppParams = array(
-		'METHOD'			=> 'doDirectPayment',
-		'PAYMENTACTION'		=> 'Sale'
-		'IPADDRESS'			=> '123.123.123.123'
-		'AMT'				=> '222.22',
-		'DESC'				=> 'some product',
-		'CREDITCARDTYPE'	=> 'VISA',
-		'ACCT'				=> '4111111111111111',
-		'EXPDATE'			=> '112011',
-		'CVV2'				=> '123',
-		'FIRSTNAME'			=> 'Aaron',
-		'LASTNAME'			=> 'Campbell',
-		'EMAIL'				=> 'pptest@xavisys.com',
-		'STREET'			=> '123 some pl',
-		'STREET2'			=> '',
-		'CITY'				=> 'San Diego',
-		'STATE'				=> 'CA',
-		'ZIP'				=> '92101',
-		'COUNTRYCODE'		=> 'US',
-		'INVNUM'			=> '12345',
-	);
-</code>
-And pass that to the hashCall helper function like this:
-<code>
+$ppParams = array(
+	'METHOD'			=> 'doDirectPayment',
+	'PAYMENTACTION'		=> 'Sale'
+	'IPADDRESS'			=> '123.123.123.123'
+	'AMT'				=> '222.22',
+	'DESC'				=> 'some product',
+	'CREDITCARDTYPE'	=> 'VISA',
+	'ACCT'				=> '4111111111111111',
+	'EXPDATE'			=> '112011',
+	'CVV2'				=> '123',
+	'FIRSTNAME'			=> 'Aaron',
+	'LASTNAME'			=> 'Campbell',
+	'EMAIL'				=> 'pptest@xavisys.com',
+	'STREET'			=> '123 some pl',
+	'STREET2'			=> '',
+	'CITY'				=> 'San Diego',
+	'STATE'				=> 'CA',
+	'ZIP'				=> '92101',
+	'COUNTRYCODE'		=> 'US',
+	'INVNUM'			=> '12345',
+);
+
 $response = hashCall($ppParams);
 </code>
 
