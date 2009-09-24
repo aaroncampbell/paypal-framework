@@ -4,7 +4,7 @@ Donate link: https://www.paypal.com/cgi-bin/webscr?cmd=_xclick&business=paypal%4
 Tags: paypal
 Requires at least: 2.6
 Tested up to: 2.8.4
-Stable tag: 1.0.1
+Stable tag: 1.0.2
 
 PayPal integration framework and admin interface as well as IPN listener.  Requires PHP5.
 
@@ -65,6 +65,12 @@ $response = hashCall($ppParams);
 </code>
 
 == Changelog ==
+
+= 1.0.2 =
+* Added a / to the IPN URL so that PayPal doesn't complain that it's invalid
+* Fixed a couple debug messages to send the proper URL used
+* Added a more general "paypal-ipn" action that can be used to catch and process all IPN message
+* Moved add_action calls inside the __construct
 
 = 1.0.1 =
 * Added sendToExpressCheckout method for sending users to PayPal to finish up Express Checkout Payments

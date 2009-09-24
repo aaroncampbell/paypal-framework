@@ -3,7 +3,7 @@
  * Plugin Name: PayPal Framework
  * Plugin URI: http://xavisys.com/2009/09/wordpress-paypal-framework/
  * Description: PayPal integration framework and admin interface as well as IPN listener.  Requires PHP5.
- * Version: 1.0.1
+ * Version: 1.0.2
  * Author: Aaron D. Campbell
  * Author URI: http://xavisys.com/
  */
@@ -110,6 +110,19 @@ class wpPayPalFramework
 	 */
 	private function __construct() {
 		$this->_getSettings();
+
+		/**
+		 * Add filters and actions
+		 */
+		add_action( 'admin_init', array($this,'registerOptions') );
+		add_action( 'admin_menu', array($this,'adminMenu') );
+		add_action( 'template_redirect', array( $this, 'listener' ));
+		add_filter( 'query_vars', array( $this, 'addPaypalListenerVar' ));
+		register_activation_hook( __FILE__, array( $this, 'activatePlugin' ) );
+
+		if ($this->_settings['legacy_support'] == 'on') {
+			add_action( 'init', 'paypalFramework_legacy_function' );
+		}
 	}
 
 	/**
@@ -440,7 +453,7 @@ class wpPayPalFramework
 							</a>
 						</th>
 						<td>
-							<?php echo get_bloginfo('url').'?'.$this->_listener_query_var.'='.urlencode($this->_listener_query_var_value); ?>
+							<?php echo get_bloginfo('url').'/?'.$this->_listener_query_var.'='.urlencode($this->_listener_query_var_value); ?>
 							<div id="pp_listener_url" style="display:none;">
 								<p><?php _e('To set this in your PayPal account:'); ?></p>
 								<ol style="list-style-type:decimal;">
@@ -619,14 +632,14 @@ class wpPayPalFramework
 		if ( !is_wp_error($resp) && $resp['response']['code'] >= 200 && $resp['response']['code'] < 300 && (strcmp( $resp['body'], "VERIFIED") == 0)) {
 			// Used for debugging.
 			if ( $this->_settings['debugging'] == 'on' && is_email($this->_settings['debugging_email']) ) {
-				wp_mail($this->_settings['debugging_email'], 'IPN Listener Test - Validation Succeeded', "URL:\r\n".print_r($this->_url, true)."\r\n\r\nOptions:\r\n".print_r($this->_settings, true)."\r\n\r\nResponse:\r\n".print_r($resp, true)."\r\n\r\nPost:\r\n".print_r($_POST, true));
+				wp_mail($this->_settings['debugging_email'], 'IPN Listener Test - Validation Succeeded', "URL:\r\n".print_r($this->_url[$this->_settings['sandbox']], true)."\r\n\r\nOptions:\r\n".print_r($this->_settings, true)."\r\n\r\nResponse:\r\n".print_r($resp, true)."\r\n\r\nPost:\r\n".print_r($_POST, true));
 			}
 			return true;
 		} else {
 			// If we can't validate the message, assume it's bad
 			// Used for debugging.
 			if ( $this->_settings['debugging'] == 'on' && is_email($this->_settings['debugging_email']) ) {
-				wp_mail($this->_settings['debugging_email'], 'IPN Listener Test - Validation Failed', "URL:\r\n".print_r($this->_url, true)."\r\n\r\nOptions:\r\n".print_r($this->_settings, true)."\r\n\r\nResponse:\r\n".print_r($resp, true)."\r\n\r\nPost:\r\n".print_r($_POST, true));
+				wp_mail($this->_settings['debugging_email'], 'IPN Listener Test - Validation Failed', "URL:\r\n".print_r($this->_url[$this->_settings['sandbox']], true)."\r\n\r\nOptions:\r\n".print_r($this->_settings, true)."\r\n\r\nResponse:\r\n".print_r($resp, true)."\r\n\r\nPost:\r\n".print_r($_POST, true));
 			}
 
 			return false;
@@ -645,6 +658,7 @@ class wpPayPalFramework
 	 * Throw an action based off the transaction type of the message
 	 */
 	private function _processMessage() {
+		do_action("paypal-ipn", $_POST);
 		do_action("paypal-{$_POST['txn_type']}", $_POST);
 
 		// Used for debugging.
@@ -663,10 +677,8 @@ function hashCall ($args) {
 }
 
 function paypalFramework_legacy_function() {
-	$wpPayPalFramework = wpPayPalFramework::getInstance();
-
-	//Only load if the function doesn't already exist and if legacy support is on
-	if ( !function_exists('hash_call') && $wpPayPalFramework->getSetting('legacy_support') == 'on' ) {
+	//Only load if the function doesn't already exist
+	if ( !function_exists('hash_call') ) {
 		/**
 		 * Support the old method of using hash_call
 		 */
@@ -683,14 +695,3 @@ function paypalFramework_legacy_function() {
 
 // Instantiate our class
 $wpPayPalFramework = wpPayPalFramework::getInstance();
-
-/**
- * Add filters and actions
- */
-add_action( 'admin_init', array($wpPayPalFramework,'registerOptions') );
-add_action( 'admin_menu', array($wpPayPalFramework,'adminMenu') );
-add_action( 'template_redirect', array( $wpPayPalFramework, 'listener' ));
-add_filter( 'query_vars', array( $wpPayPalFramework, 'addPaypalListenerVar' ));
-register_activation_hook( __FILE__, array( $wpPayPalFramework, 'activatePlugin' ) );
-
-add_action( 'init', 'paypalFramework_legacy_function' );
