@@ -4,7 +4,7 @@ Donate link: https://www.paypal.com/cgi-bin/webscr?cmd=_xclick&business=paypal%4
 Tags: paypal
 Requires at least: 2.6
 Tested up to: 2.8.4
-Stable tag: 1.0.2
+Stable tag: 1.0.3
 
 PayPal integration framework and admin interface as well as IPN listener.  Requires PHP5.
 
@@ -65,6 +65,10 @@ $response = hashCall($ppParams);
 </code>
 
 == Changelog ==
+
+= 1.0.3 =
+* IPN Message validations now work even if there are apostophes (slashes are stripped)
+* You can now have multiple debug E-Mail addresses (comma separated)
 
 = 1.0.2 =
 * Added a / to the IPN URL so that PayPal doesn't complain that it's invalid

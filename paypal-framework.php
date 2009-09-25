@@ -3,7 +3,7 @@
  * Plugin Name: PayPal Framework
  * Plugin URI: http://xavisys.com/2009/09/wordpress-paypal-framework/
  * Description: PayPal integration framework and admin interface as well as IPN listener.  Requires PHP5.
- * Version: 1.0.2
+ * Version: 1.0.3
  * Author: Aaron D. Campbell
  * Author URI: http://xavisys.com/
  */
@@ -110,6 +110,7 @@ class wpPayPalFramework
 	 */
 	private function __construct() {
 		$this->_getSettings();
+		$this->_fixDebugEmails();
 
 		/**
 		 * Add filters and actions
@@ -412,7 +413,7 @@ class wpPayPalFramework
 					<tr valign="top">
 						<th scope="row">
 							<label for="<?php echo $this->_optionsName; ?>_debugging_email">
-								<a title="<?php _e('Click for Help!'); ?>" href="#" onclick="jQuery('#pp_version').toggle(); return false;">
+								<a title="<?php _e('Click for Help!'); ?>" href="#" onclick="jQuery('#pp_debugging_email').toggle(); return false;">
 									<?php _e('Debugging E-Mail:') ?>
 								</a>
 							</label>
@@ -420,8 +421,8 @@ class wpPayPalFramework
 						<td>
 							<input type="text" name="<?php echo $this->_optionsName; ?>[debugging_email]" value="<?php echo attribute_escape($this->_settings['debugging_email']); ?>" id="<?php echo $this->_optionsName; ?>_version" class="regular-text" />
 							<small id="pp_debugging_email" style="display:none;">
-								This is the E-Mail address that will receive the
-								debug messages.
+								This is a comma separated list of E-Mail
+								addresses that will receive the debug messages.
 							</small>
 						</td>
 					</tr>
@@ -552,12 +553,12 @@ class wpPayPalFramework
 		// If the response was valid, decode it and return it.  Otherwise return a WP_Error
 		if ( !is_wp_error($resp) && $resp['response']['code'] >= 200 && $resp['response']['code'] < 300 ) {
 			// Used for debugging.
-			if ( $this->_settings['debugging'] == 'on' && is_email($this->_settings['debugging_email']) ) {
+			if ( $this->_settings['debugging'] == 'on' && !empty($this->_settings['debugging_email']) ) {
 				wp_mail($this->_settings['debugging_email'], 'PayPal Framework - hashCall sent successfully', "Request:\r\n".print_r($params['body'], true)."\r\n\r\nResponse:\r\n".print_r(wp_parse_args($resp['body']), true));
 			}
 			return wp_parse_args($resp['body']);
 		} else {
-			if ( $this->_settings['debugging'] == 'on' && is_email($this->_settings['debugging_email']) ) {
+			if ( $this->_settings['debugging'] == 'on' && !empty($this->_settings['debugging_email']) ) {
 				wp_mail($this->_settings['debugging_email'], 'PayPal Framework - hashCall failed', "Request:\r\n".print_r($params['body'], true)."\r\n\r\nResponse:\r\n".print_r($resp, true));
 			}
 			if ( !is_wp_error($resp) ) {
@@ -586,6 +587,7 @@ class wpPayPalFramework
 	public function listener() {
 		// Check that the query var is set and is the correct value.
 		if (get_query_var( $this->_listener_query_var ) == $this->_listener_query_var_value) {
+			$_POST = stripslashes_deep($_POST);
 			// Try to validate the response to make sure it's from PayPal
 			if ($this->_validateMessage()) {
 				// If the message validated, process it.
@@ -601,6 +603,12 @@ class wpPayPalFramework
 	 */
 	public function getUrl() {
 		return $this->_url[$this->_settings['sandbox']];
+	}
+
+	public function _fixDebugEmails() {
+		$this->_settings['debugging_email'] = preg_split('/\s*,\s*/', $this->_settings['debugging_email']);
+		$this->_settings['debugging_email'] = array_filter($this->_settings['debugging_email'], 'is_email');
+		$this->_settings['debugging_email'] = implode(',', $this->_settings['debugging_email']);
 	}
 
 	/**
@@ -631,14 +639,14 @@ class wpPayPalFramework
 		// If the response was valid, check to see if the request was valid
 		if ( !is_wp_error($resp) && $resp['response']['code'] >= 200 && $resp['response']['code'] < 300 && (strcmp( $resp['body'], "VERIFIED") == 0)) {
 			// Used for debugging.
-			if ( $this->_settings['debugging'] == 'on' && is_email($this->_settings['debugging_email']) ) {
+			if ( $this->_settings['debugging'] == 'on' && !empty($this->_settings['debugging_email']) ) {
 				wp_mail($this->_settings['debugging_email'], 'IPN Listener Test - Validation Succeeded', "URL:\r\n".print_r($this->_url[$this->_settings['sandbox']], true)."\r\n\r\nOptions:\r\n".print_r($this->_settings, true)."\r\n\r\nResponse:\r\n".print_r($resp, true)."\r\n\r\nPost:\r\n".print_r($_POST, true));
 			}
 			return true;
 		} else {
 			// If we can't validate the message, assume it's bad
 			// Used for debugging.
-			if ( $this->_settings['debugging'] == 'on' && is_email($this->_settings['debugging_email']) ) {
+			if ( $this->_settings['debugging'] == 'on' && !empty($this->_settings['debugging_email']) ) {
 				wp_mail($this->_settings['debugging_email'], 'IPN Listener Test - Validation Failed', "URL:\r\n".print_r($this->_url[$this->_settings['sandbox']], true)."\r\n\r\nOptions:\r\n".print_r($this->_settings, true)."\r\n\r\nResponse:\r\n".print_r($resp, true)."\r\n\r\nPost:\r\n".print_r($_POST, true));
 			}
 
@@ -662,7 +670,7 @@ class wpPayPalFramework
 		do_action("paypal-{$_POST['txn_type']}", $_POST);
 
 		// Used for debugging.
-		if ( $this->_settings['debugging'] == 'on' && is_email($this->_settings['debugging_email']) ) {
+		if ( $this->_settings['debugging'] == 'on' && !empty($this->_settings['debugging_email']) ) {
 			wp_mail($this->_settings['debugging_email'], 'IPN Listener Test - _processMessage()', "Action thrown: paypal-{$_POST['txn_type']}\r\n\r\nPassed to action:\r\n".print_r($_POST, true));
 		}
 	}
@@ -687,7 +695,6 @@ function paypalFramework_legacy_function() {
 			$nvpStr = wp_parse_args( $nvpStr );
 			$nvpStr['METHOD'] = $methodName;
 			$wpPayPalFramework = wpPayPalFramework::getInstance();
-			dump($nvpStr, '$nvpStr');
 			return $wpPayPalFramework->hashCall($nvpStr);
 		}
 	}
