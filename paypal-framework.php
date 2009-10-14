@@ -3,7 +3,7 @@
  * Plugin Name: PayPal Framework
  * Plugin URI: http://xavisys.com/2009/09/wordpress-paypal-framework/
  * Description: PayPal integration framework and admin interface as well as IPN listener.  Requires PHP5.
- * Version: 1.0.3
+ * Version: 1.0.4
  * Author: Aaron D. Campbell
  * Author URI: http://xavisys.com/
  */
@@ -554,17 +554,31 @@ class wpPayPalFramework
 		if ( !is_wp_error($resp) && $resp['response']['code'] >= 200 && $resp['response']['code'] < 300 ) {
 			// Used for debugging.
 			if ( $this->_settings['debugging'] == 'on' && !empty($this->_settings['debugging_email']) ) {
-				wp_mail($this->_settings['debugging_email'], 'PayPal Framework - hashCall sent successfully', "Request:\r\n".print_r($params['body'], true)."\r\n\r\nResponse:\r\n".print_r(wp_parse_args($resp['body']), true));
+				$request = $this->_sanitizeRequest($params['body']);
+				wp_mail($this->_settings['debugging_email'], 'PayPal Framework - hashCall sent successfully', "Request:\r\n".print_r($request, true)."\r\n\r\nResponse:\r\n".print_r(wp_parse_args($resp['body']), true));
 			}
 			return wp_parse_args($resp['body']);
 		} else {
 			if ( $this->_settings['debugging'] == 'on' && !empty($this->_settings['debugging_email']) ) {
-				wp_mail($this->_settings['debugging_email'], 'PayPal Framework - hashCall failed', "Request:\r\n".print_r($params['body'], true)."\r\n\r\nResponse:\r\n".print_r($resp, true));
+				$request = $this->_sanitizeRequest($params['body']);
+				wp_mail($this->_settings['debugging_email'], 'PayPal Framework - hashCall failed', "Request:\r\n".print_r($request, true)."\r\n\r\nResponse:\r\n".print_r($resp, true));
 			}
 			if ( !is_wp_error($resp) ) {
 				$resp = new WP_Error('http_request_failed', $resp['response']['message'], $resp['response']);
 			}
 			return $resp;
+		}
+	}
+
+	private function _sanitizeRequest($request) {
+		/**
+		 * If this is a live request, hide sensitive data in the debug
+		 * E-Mails we send
+		 */
+		if ( $this->_settings['sandbox'] != 'sandbox' ) {
+			$request['ACCT']	= str_repeat('*', strlen($request['ACCT'])-4) . substr($request['ACCT'], -4);
+			$request['EXPDATE']	= str_repeat('*', strlen($request['EXPDATE']));
+			$request['CVV2']	= str_repeat('*', strlen($request['CVV2']));
 		}
 	}
 
@@ -667,11 +681,14 @@ class wpPayPalFramework
 	 */
 	private function _processMessage() {
 		do_action("paypal-ipn", $_POST);
-		do_action("paypal-{$_POST['txn_type']}", $_POST);
+		if ( !empty($_POST['txn_type']) ) {
+			$specificAction = " and paypal-{$_POST['txn_type']}";
+			do_action("paypal-{$_POST['txn_type']}", $_POST);
+		}
 
 		// Used for debugging.
 		if ( $this->_settings['debugging'] == 'on' && !empty($this->_settings['debugging_email']) ) {
-			wp_mail($this->_settings['debugging_email'], 'IPN Listener Test - _processMessage()', "Action thrown: paypal-{$_POST['txn_type']}\r\n\r\nPassed to action:\r\n".print_r($_POST, true));
+			wp_mail($this->_settings['debugging_email'], 'IPN Listener Test - _processMessage()', "Actions thrown: paypal-ipn{$specificAction}\r\n\r\nPassed to action:\r\n".print_r($_POST, true));
 		}
 	}
 }
@@ -694,6 +711,7 @@ function paypalFramework_legacy_function() {
 			_deprecated_function(__FUNCTION__, '0.1', 'wpPayPalFramework::hashCall()');
 			$nvpStr = wp_parse_args( $nvpStr );
 			$nvpStr['METHOD'] = $methodName;
+			$nvpStr = array_map('urldecode', $nvpStr);
 			$wpPayPalFramework = wpPayPalFramework::getInstance();
 			return $wpPayPalFramework->hashCall($nvpStr);
 		}
