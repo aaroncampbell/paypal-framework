@@ -64,6 +64,31 @@ $ppParams = array(
 $response = hashCall($ppParams);
 </code>
 
+= How do I use the Listener to process PayPal messages? =
+
+First you have to tell PayPal to send message to the correct URL.  Go to the
+PayPal Framework settings page and click the "PayPal IPN Listener URL" link to
+see instructions on how to use the URL that's listed there.  Once your PayPal
+account has been set up the listener will automatically process all IPN messages
+and turn them into WordPress actions that you can hook into.  You can use the
+'paypal-ipn' action to look at every message you ever get, or hook directly into
+a 'paypal-{transaction-type}' hook to process a specific type of message:
+<code>
+add_action('paypal-ipn', 'my_process_ipn');
+function my_process_ipn( $data ) {
+	echo 'Processing IPN Message:<pre>';
+	var_dump( $data );
+	echo '</pre>';
+}
+
+add_action('paypal-recurring_payment_failed', 'my_process_ipn_recurring_payment_failed');
+function my_process_ipn_recurring_payment_failed( $data ) {
+	echo 'A recurring payment has failed. Here is the data I have to process this:<pre>';
+	var_dump( $data );
+	echo '</pre>';
+}
+</code>
+
 == Changelog ==
 
 = 1.0.6 =
