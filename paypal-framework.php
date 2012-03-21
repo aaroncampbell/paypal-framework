@@ -1,11 +1,13 @@
 <?php
 /**
  * Plugin Name: PayPal Framework
- * Plugin URI: http://xavisys.com/2009/09/wordpress-paypal-framework/
+ * Plugin URI: http://bluedogwebservices.com/wordpress-plugin/paypal-framework/
  * Description: PayPal integration framework and admin interface as well as IPN listener.  Requires PHP5.
- * Version: 1.0.5
+ * Version: 1.0.7
  * Author: Aaron D. Campbell
- * Author URI: http://xavisys.com/
+ * Author URI: http://bluedogwebservices.com/
+ * License: GPL
+ * Text Domain: paypal-framework
  */
 
 /*  Copyright 2009  Aaron D. Campbell  (email : wp_plugins@xavisys.com)
@@ -26,9 +28,8 @@
 */
 
 /**
- * wpPayPalFramework is the class that handles ALL of the plugin functionality.
- * It helps us avoid name collisions
- * http://codex.wordpress.org/Writing_a_Plugin#Avoiding_Function_Name_Collisions
+ * wpPayPalFramework is the class that handles ALL of the plugin functionality,
+ * and helps us avoid name collisions
  */
 class wpPayPalFramework
 {
@@ -81,26 +82,7 @@ class wpPayPalFramework
 	 */
 	private $_listener_query_var_value	= 'IPN';
 
-	private $_currencies = array(
-		'AUD'	=> 'Australian Dollar',
-		'CAD'	=> 'Canadian Dollar',
-		'CZK'	=> 'Czech Koruna',
-		'DKK'	=> 'Danish Krone',
-		'EUR'	=> 'Euro',
-		'HKD'	=> 'Hong Kong Dollar',
-		'HUF'	=> 'Hungarian Forint',
-		'ILS'	=> 'Israeli New Sheqel',
-		'JPY'	=> 'Japanese Yen',
-		'MXN'	=> 'Mexican Peso',
-		'NOK'	=> 'Norwegian Krone',
-		'NZD'	=> 'New Zealand Dollar',
-		'PLN'	=> 'Polish Zloty',
-		'GBP'	=> 'Pound Sterling',
-		'SGD'	=> 'Singapore Dollar',
-		'SEK'	=> 'Swedish Krona',
-		'CHF'	=> 'Swiss Franc',
-		'USD'	=> 'U.S. Dollar'
-	);
+	private $_currencies = array();
 
 	/**
 	 * This is our constructor, which is private to force the use of
@@ -112,18 +94,38 @@ class wpPayPalFramework
 		$this->_getSettings();
 		$this->_fixDebugEmails();
 
+		$this->_currencies = array(
+			'AUD'	=> __( 'Australian Dollar', 'paypal-framework' ),
+			'CAD'	=> __( 'Canadian Dollar', 'paypal-framework' ),
+			'CZK'	=> __( 'Czech Koruna', 'paypal-framework' ),
+			'DKK'	=> __( 'Danish Krone', 'paypal-framework' ),
+			'EUR'	=> __( 'Euro', 'paypal-framework' ),
+			'HKD'	=> __( 'Hong Kong Dollar', 'paypal-framework' ),
+			'HUF'	=> __( 'Hungarian Forint', 'paypal-framework' ),
+			'ILS'	=> __( 'Israeli New Sheqel', 'paypal-framework' ),
+			'JPY'	=> __( 'Japanese Yen', 'paypal-framework' ),
+			'MXN'	=> __( 'Mexican Peso', 'paypal-framework' ),
+			'NOK'	=> __( 'Norwegian Krone', 'paypal-framework' ),
+			'NZD'	=> __( 'New Zealand Dollar', 'paypal-framework' ),
+			'PLN'	=> __( 'Polish Zloty', 'paypal-framework' ),
+			'GBP'	=> __( 'Pound Sterling', 'paypal-framework' ),
+			'SGD'	=> __( 'Singapore Dollar', 'paypal-framework' ),
+			'SEK'	=> __( 'Swedish Krona', 'paypal-framework' ),
+			'CHF'	=> __( 'Swiss Franc', 'paypal-framework' ),
+			'USD'	=> __( 'U.S. Dollar', 'paypal-framework' )
+		);
+
 		/**
 		 * Add filters and actions
 		 */
 		add_action( 'admin_init', array($this,'registerOptions') );
 		add_action( 'admin_menu', array($this,'adminMenu') );
-		add_action( 'template_redirect', array( $this, 'listener' ));
-		add_filter( 'query_vars', array( $this, 'addPaypalListenerVar' ));
-		register_activation_hook( __FILE__, array( $this, 'activatePlugin' ) );
+		add_action( 'template_redirect', array( $this, 'listener' ) );
+		add_filter( 'query_vars', array( $this, 'addPaypalListenerVar' ) );
+		add_filter( 'init', array( $this, 'init_locale' ) );
 
-		if ($this->_settings['legacy_support'] == 'on') {
+		if ( 'on' == $this->_settings['legacy_support'] )
 			add_action( 'init', 'paypalFramework_legacy_function' );
-		}
 	}
 
 	/**
@@ -133,23 +135,21 @@ class wpPayPalFramework
 	 * @return wpPayPalFramework
 	 */
 	public static function getInstance() {
-		if ( !self::$instance ) {
+		if ( !self::$instance )
 			self::$instance = new self;
-		}
 		return self::$instance;
 	}
 
-	public function activatePlugin() {
-		update_option( $this->_optionsName, $this->_settings);
+	public function init_locale() {
+		load_plugin_textdomain( paypal-framework, false, dirname( plugin_basename( __FILE__ ) ) . '/languages' );
 	}
 
 	private function _getSettings() {
-		if (empty($this->_settings)) {
+		if (empty($this->_settings))
 			$this->_settings = get_option( $this->_optionsName );
-		}
-		if ( !is_array( $this->_settings ) ) {
+		if ( !is_array( $this->_settings ) )
 			$this->_settings = array();
-		}
+
 		$defaults = array(
 			'sandbox'			=> 'sandbox',
 			'username-sandbox'	=> '',
@@ -164,31 +164,30 @@ class wpPayPalFramework
 			'debugging_email'	=> '',
 			'legacy_support'	=> 'off',
 		);
-		$this->_settings = wp_parse_args($this->_settings, $defaults);
+		$this->_settings = wp_parse_args( $this->_settings, $defaults );
 	}
 
 	public function getSetting( $settingName, $default = false ) {
-		if (empty($this->_settings)) {
+		if (empty($this->_settings))
 			$this->_getSettings();
-		}
-		if ( isset($this->_settings[$settingName]) ) {
+
+		if ( isset($this->_settings[$settingName]) )
 			return $this->_settings[$settingName];
-		} else {
+		else
 			return $default;
-		}
 	}
 
 	public function registerOptions() {
-		/**
-		 * @todo Remove once this supports only 2.7+
-		 */
-		if ( function_exists('register_setting') ) {
-			register_setting( $this->_optionsGroup, $this->_optionsName );
-		}
+		register_setting( $this->_optionsGroup, $this->_optionsName );
 	}
 
 	public function adminMenu() {
-		add_options_page(__('PayPal Settings'), __('PayPal'), 'manage_options', 'PayPalFramework', array($this, 'options'));
+		$page = add_options_page( __( 'PayPal Settings', 'paypal-framework' ), __( 'PayPal', 'paypal-framework' ), 'manage_options', 'PayPalFramework', array( $this, 'options' ) );
+		add_action( 'admin_print_styles-' . $page, array( $this, 'admin_css' ) );
+	}
+
+	public function admin_css() {
+		wp_enqueue_style( 'paypal-framework', plugin_dir_url( __FILE__ ) . 'paypal-framework.css', array(), '0.0.1' );
 	}
 
 	/**
@@ -196,300 +195,245 @@ class wpPayPalFramework
 	 */
 	public function options() {
 ?>
-		<style type="text/css">
-			#wp_paypal_framework table tr th a {
-				cursor:help;
-			}
-			.large-text{width:99%;}
-			.regular-text{width:25em;}
-		</style>
+		<script type="text/javascript">
+		jQuery( function( $ ) {
+			$( '#wp_paypal_framework span.help' ).click(function(){
+				$( this ).next().toggle();
+			});
+		});
+		</script>
 		<div class="wrap">
-			<h2><?php _e('PayPal Options') ?></h2>
+			<h2><?php _e( 'PayPal Options', 'paypal-framework' ); ?></h2>
 			<form action="options.php" method="post" id="wp_paypal_framework">
-<?php
-		/**
-		 * @todo Use only settings_fields() once this supports only 2.7+
-		 */
-
-		if ( function_exists('settings_fields') ) {
-			settings_fields( $this->_optionsGroup );
-		} else {
-			wp_nonce_field('update-options');
-?>
-			<input type="hidden" name="action" value="update" />
-			<input type="hidden" name="page_options" value="<?php echo $this->_optionsName; ?>" />
-<?php
-		}
-?>
+				<?php settings_fields( $this->_optionsGroup ); ?>
 				<table class="form-table">
 					<tr valign="top">
 						<th scope="row">
 							<label for="<?php echo $this->_optionsName; ?>_username-live">
-								<a title="<?php _e('Click for Help!'); ?>" href="#" onclick="jQuery('#pp_username-live').toggle(); return false;">
-									<?php _e('PayPal Live API Username:') ?>
-								</a>
+								<?php _e( 'PayPal Live API Username:', 'paypal-framework' ); ?>
 							</label>
 						</th>
 						<td>
-							<input type="text" name="<?php echo $this->_optionsName; ?>[username-live]" value="<?php echo attribute_escape($this->_settings['username-live']); ?>" id="<?php echo $this->_optionsName; ?>_username-live" class="regular-text code" />
-							<ol id="pp_username-live" style="display:none; list-style-type:decimal;">
-								<li>
-									<?php echo sprintf(__('You must have a PayPal business account.  If you do not have one, <a href="%s">sign up for one</a>.'), 'https://www.paypal.com/us/mrb/pal=TJ287296FD8KW'); ?>
-								</li>
-								<li>
-									<?php echo sprintf(__('You must have a PayPal Website Payment Pro.  If you do not have one, <a href="%s">sign up for it</a>.'), 'https://www.paypal.com/us/cgi-bin/webscr?cmd=_wp-pro-overview'); ?>
-								</li>
-								<li>
-									<?php echo sprintf(__('If you will be doing any recurring payments, you must have PayPal\'s Direct Payments Recurring Payments.  If you do not have it set up, please <a href="%s">set it up</a>.'), 'https://www.paypal.com/cgi-bin/webscr?cmd=xpt/cps/general/DPRPLaunch-outside'); ?>
-								</li>
-								<li>
-									<?php echo ('Lastly, you need to generate new API Credentials: In your PayPal account go to "My Account" -> "Profile" -> "Request API credentials" -> "PayPal API" -> "Set up PayPal API credentials and permissions".  If asked, you want to request an "API signature" not a certificate.  All the data that you are given should easily fit in this form.'); ?>
-								</li>
-							</ol>
+							<input type="text" name="<?php echo $this->_optionsName; ?>[username-live]" value="<?php echo esc_attr( $this->_settings['username-live'] ); ?>" id="<?php echo $this->_optionsName; ?>_username-live" class="regular-text code" />
+							<?php $this->_show_help( 'live' ); ?>
 						</td>
 					</tr>
 					<tr valign="top">
 						<th scope="row">
 							<label for="<?php echo $this->_optionsName; ?>_password-live">
-								<a title="<?php _e('Click for Help!'); ?>" href="#" onclick="jQuery('#pp_password-live').toggle(); return false;">
-									<?php _e('PayPal Live API Password:') ?>
-								</a>
+								<?php _e('PayPal Live API Password:', 'paypal-framework') ?>
 							</label>
 						</th>
 						<td>
-							<input type="text" name="<?php echo $this->_optionsName; ?>[password-live]" value="<?php echo attribute_escape($this->_settings['password-live']); ?>" id="<?php echo $this->_optionsName; ?>_password-live" class="regular-text code" />
-							<ol id="pp_password-live" style="display:none; list-style-type:decimal;">
-								<li>
-									<?php echo sprintf(__('You must have a PayPal business account.  If you do not have one, <a href="%s">sign up for one</a>.'), 'https://www.paypal.com/us/mrb/pal=TJ287296FD8KW'); ?>
-								</li>
-								<li>
-									<?php echo sprintf(__('You must have a PayPal Website Payment Pro.  If you do not have one, <a href="%s">sign up for it</a>.'), 'https://www.paypal.com/us/cgi-bin/webscr?cmd=_wp-pro-overview'); ?>
-								</li>
-								<li>
-									<?php echo sprintf(__('If you will be doing any recurring payments, you must have PayPal\'s Direct Payments Recurring Payments.  If you do not have it set up, please <a href="%s">set it up</a>.'), 'https://www.paypal.com/cgi-bin/webscr?cmd=xpt/cps/general/DPRPLaunch-outside'); ?>
-								</li>
-								<li>
-									<?php echo ('Lastly, you need to generate new API Credentials: In your PayPal account go to "My Account" -> "Profile" -> "Request API credentials" -> "PayPal API" -> "Set up PayPal API credentials and permissions".  If asked, you want to request an "API signature" not a certificate.  All the data that you are given should easily fit in this form.'); ?>
-								</li>
-							</ol>
+							<input type="text" name="<?php echo $this->_optionsName; ?>[password-live]" value="<?php echo esc_attr( $this->_settings['password-live'] ); ?>" id="<?php echo $this->_optionsName; ?>_password-live" class="regular-text code" />
+							<?php $this->_show_help( 'live' ); ?>
 						</td>
 					</tr>
 					<tr valign="top">
 						<th scope="row">
 							<label for="<?php echo $this->_optionsName; ?>_signature-live">
-								<a title="<?php _e('Click for Help!'); ?>" href="#" onclick="jQuery('#pp_signature-live').toggle(); return false;">
-									<?php _e('PayPal Live API Signature:') ?>
-								</a>
+								<?php _e( 'PayPal Live API Signature:', 'paypal-framework' ) ?>
 							</label>
 						</th>
 						<td>
-							<input type="text" name="<?php echo $this->_optionsName; ?>[signature-live]" value="<?php echo attribute_escape($this->_settings['signature-live']); ?>" id="<?php echo $this->_optionsName; ?>_signature-live" class="regular-text code" />
-							<ol id="pp_signature-live" style="display:none; list-style-type:decimal;">
-								<li>
-									<?php echo sprintf(__('You must have a PayPal business account.  If you do not have one, <a href="%s">sign up for one</a>.'), 'https://www.paypal.com/us/mrb/pal=TJ287296FD8KW'); ?>
-								</li>
-								<li>
-									<?php echo sprintf(__('You must have a PayPal Website Payment Pro.  If you do not have one, <a href="%s">sign up for it</a>.'), 'https://www.paypal.com/us/cgi-bin/webscr?cmd=_wp-pro-overview'); ?>
-								</li>
-								<li>
-									<?php echo sprintf(__('If you will be doing any recurring payments, you must have PayPal\'s Direct Payments Recurring Payments.  If you do not have it set up, please <a href="%s">set it up</a>.'), 'https://www.paypal.com/cgi-bin/webscr?cmd=xpt/cps/general/DPRPLaunch-outside'); ?>
-								</li>
-								<li>
-									<?php echo ('Lastly, you need to generate new API Credentials: In your PayPal account go to "My Account" -> "Profile" -> "Request API credentials" -> "PayPal API" -> "Set up PayPal API credentials and permissions".  If asked, you want to request an "API signature" not a certificate.  All the data that you are given should easily fit in this form.'); ?>
-								</li>
-							</ol>
+							<input type="text" name="<?php echo $this->_optionsName; ?>[signature-live]" value="<?php echo esc_attr($this->_settings['signature-live']); ?>" id="<?php echo $this->_optionsName; ?>_signature-live" class="regular-text code" />
+							<?php $this->_show_help( 'live' ); ?>
 						</td>
 					</tr>
 					<tr valign="top">
 						<th scope="row">
 							<label for="<?php echo $this->_optionsName; ?>_username-sandbox">
-								<a title="<?php _e('Click for Help!'); ?>" href="#" onclick="jQuery('#pp_username-sandbox').toggle(); return false;">
-									<?php _e('PayPal Sandbox API Username:') ?>
-								</a>
+								<?php _e('PayPal Sandbox API Username:', 'paypal-framework') ?>
 							</label>
 						</th>
 						<td>
-							<input type="text" name="<?php echo $this->_optionsName; ?>[username-sandbox]" value="<?php echo attribute_escape($this->_settings['username-sandbox']); ?>" id="<?php echo $this->_optionsName; ?>_username-sandbox" class="regular-text code" />
-							<p id="pp_username-sandbox" style="display:none;">
-								<?php echo sprintf(__('You must have a <a href="%s">PayPal sandbox account</a>.'), 'https://developer.paypal.com/'); ?>
-							</p>
+							<input type="text" name="<?php echo $this->_optionsName; ?>[username-sandbox]" value="<?php echo esc_attr($this->_settings['username-sandbox']); ?>" id="<?php echo $this->_optionsName; ?>_username-sandbox" class="regular-text code" />
+							<?php $this->_show_help( 'sandbox' ); ?>
 						</td>
 					</tr>
 					<tr valign="top">
 						<th scope="row">
 							<label for="<?php echo $this->_optionsName; ?>_password-sandbox">
-								<a title="<?php _e('Click for Help!'); ?>" href="#" onclick="jQuery('#pp_password-sandbox').toggle(); return false;">
-									<?php _e('PayPal Sandbox API Password:') ?>
-								</a>
+								<?php _e('PayPal Sandbox API Password:', 'paypal-framework') ?>
 							</label>
 						</th>
 						<td>
-							<input type="text" name="<?php echo $this->_optionsName; ?>[password-sandbox]" value="<?php echo attribute_escape($this->_settings['password-sandbox']); ?>" id="<?php echo $this->_optionsName; ?>_password-sandbox" class="regular-text code" />
-							<p id="pp_password-sandbox" style="display:none;">
-								<?php echo sprintf(__('You must have a <a href="%s">PayPal sandbox account</a>.'), 'https://developer.paypal.com/'); ?>
-							</p>
+							<input type="text" name="<?php echo $this->_optionsName; ?>[password-sandbox]" value="<?php echo esc_attr($this->_settings['password-sandbox']); ?>" id="<?php echo $this->_optionsName; ?>_password-sandbox" class="regular-text code" />
+							<?php $this->_show_help( 'sandbox' ); ?>
 						</td>
 					</tr>
 					<tr valign="top">
 						<th scope="row">
 							<label for="<?php echo $this->_optionsName; ?>_signature-sandbox">
-								<a title="<?php _e('Click for Help!'); ?>" href="#" onclick="jQuery('#pp_signature-sandbox').toggle(); return false;">
-									<?php _e('PayPal Sandbox API Signature:') ?>
-								</a>
+								<?php _e('PayPal Sandbox API Signature:', 'paypal-framework') ?>
 							</label>
 						</th>
 						<td>
-							<input type="text" name="<?php echo $this->_optionsName; ?>[signature-sandbox]" value="<?php echo attribute_escape($this->_settings['signature-sandbox']); ?>" id="<?php echo $this->_optionsName; ?>_signature-sandbox" class="regular-text code" />
-							<p id="pp_signature-sandbox" style="display:none;">
-								<?php echo sprintf(__('You must have a <a href="%s">PayPal sandbox account</a>.'), 'https://developer.paypal.com/'); ?>
-							</p>
+							<input type="text" name="<?php echo $this->_optionsName; ?>[signature-sandbox]" value="<?php echo esc_attr($this->_settings['signature-sandbox']); ?>" id="<?php echo $this->_optionsName; ?>_signature-sandbox" class="regular-text code" />
+							<?php $this->_show_help( 'sandbox' ); ?>
 						</td>
 					</tr>
 					<tr valign="top">
 						<th scope="row">
-							<?php _e('PayPal Sandbox or Live:') ?>
+							<?php _e('PayPal Sandbox or Live:', 'paypal-framework') ?>
 						</th>
 						<td>
 							<input type="radio" name="<?php echo $this->_optionsName; ?>[sandbox]" value="live" id="<?php echo $this->_optionsName; ?>_sandbox-live"<?php checked('live', $this->_settings['sandbox']); ?> />
-							<label for="<?php echo $this->_optionsName; ?>_sandbox-live"><?php _e('Live'); ?></label><br />
+							<label for="<?php echo $this->_optionsName; ?>_sandbox-live"><?php _e('Live', 'paypal-framework'); ?></label><br />
 							<input type="radio" name="<?php echo $this->_optionsName; ?>[sandbox]" value="sandbox" id="<?php echo $this->_optionsName; ?>_sandbox-sandbox"<?php checked('sandbox', $this->_settings['sandbox']); ?> />
-							<label for="<?php echo $this->_optionsName; ?>_sandbox-sandbox"><?php _e('Use Sandbox (for testing only)'); ?></label><br />
+							<label for="<?php echo $this->_optionsName; ?>_sandbox-sandbox"><?php _e('Use Sandbox (for testing only)', 'paypal-framework'); ?></label><br />
 						</td>
 					</tr>
 					<tr valign="top">
 						<th scope="row">
 							<label for="<?php echo $this->_optionsName; ?>_currency">
-								<a title="<?php _e('Click for Help!'); ?>" href="#" onclick="jQuery('#pp_currency').toggle(); return false;">
-									<?php _e('Default Currency:') ?>
-								</a>
+								<?php _e('Default Currency:', 'paypal-framework') ?>
 							</label>
 						</th>
 						<td>
 							<select id="<?php echo $this->_optionsName; ?>_currency" class="postform" name="<?php echo $this->_optionsName; ?>[currency]">
-								<option value=''>Please Choose Default Currency</option>
-<?php	foreach ( $this->_currencies as $code => $currency ) { ?>
-								<option value='<?php echo attribute_escape($code); ?>'<?php selected($code, $this->_settings['currency']); ?>><?php _e($currency); ?></option>
-<?php	} ?>
+								<option value=''><?php _e( 'Please Choose Default Currency', 'paypal-framework' ); ?></option>
+								<?php foreach ( $this->_currencies as $code => $currency ) { ?>
+								<option value='<?php echo esc_attr($code); ?>'<?php selected($code, $this->_settings['currency']); ?>><?php echo esc_html( $currency ); ?></option>
+								<?php } ?>
 							</select>
-							<small id="pp_currency" style="display:none;">
-								This is just the default currency for if one isn't specified.
+							<small>
+								<?php _e( "This is just the default currency for if one isn't specified.", 'paypal-framework' ); ?>
 							</small>
 						</td>
 					</tr>
 					<tr valign="top">
 						<th scope="row">
 							<label for="<?php echo $this->_optionsName; ?>_version">
-								<a title="<?php _e('Click for Help!'); ?>" href="#" onclick="jQuery('#pp_version').toggle(); return false;">
-									<?php _e('PayPal API version:') ?>
-								</a>
+								<?php _e('PayPal API version:', 'paypal-framework') ?>
 							</label>
 						</th>
 						<td>
-							<input type="text" name="<?php echo $this->_optionsName; ?>[version]" value="<?php echo attribute_escape($this->_settings['version']); ?>" id="<?php echo $this->_optionsName; ?>_version" class="small-text" />
-							<small id="pp_version" style="display:none;">
-								This is the default version to use if one isn't
-								specified.  It is usually safe to set this to
-								the <a href="http://developer.paypal-portal.com/pdn/board/message?board.id=nvp&thread.id=4475">most recent version</a>.
+							<input type="text" name="<?php echo $this->_optionsName; ?>[version]" value="<?php echo esc_attr($this->_settings['version']); ?>" id="<?php echo $this->_optionsName; ?>_version" class="small-text" />
+							<small>
+								<?php echo sprintf( __( "This is the default version to use if one isn't specified.  It is usually safe to set this to the <a href='%s'>most recent version</a>.", 'paypal-framework' ), 'http://developer.paypal-portal.com/pdn/board/message?board.id=nvp&thread.id=4475' ); ?>
 							</small>
 						</td>
 					</tr>
 					<tr valign="top">
 						<th scope="row">
-							<a title="<?php _e('Click for Help!'); ?>" href="#" onclick="jQuery('#pp_debugging').toggle(); return false;">
-								<?php _e('Debugging Mode:') ?>
-							</a>
+							<?php _e('Debugging Mode:', 'paypal-framework') ?>
 						</th>
 						<td>
 							<input type="radio" name="<?php echo $this->_optionsName; ?>[debugging]" value="on" id="<?php echo $this->_optionsName; ?>_debugging-on"<?php checked('on', $this->_settings['debugging']); ?> />
-							<label for="<?php echo $this->_optionsName; ?>_debugging-on"><?php _e('On'); ?></label><br />
+							<label for="<?php echo $this->_optionsName; ?>_debugging-on"><?php _e('On', 'paypal-framework'); ?></label><br />
 							<input type="radio" name="<?php echo $this->_optionsName; ?>[debugging]" value="off" id="<?php echo $this->_optionsName; ?>_debugging-off"<?php checked('off', $this->_settings['debugging']); ?> />
-							<label for="<?php echo $this->_optionsName; ?>_debugging-off"><?php _e('Off'); ?></label><br />
-							<small id="pp_debugging" style="display:none;">
-								If this is on, debugging messages will be sent
-								to the E-Mail address set below.
+							<label for="<?php echo $this->_optionsName; ?>_debugging-off"><?php _e('Off', 'paypal-framework'); ?></label><br />
+							<small>
+								<?php _e( 'If this is on, debugging messages will be sent to the E-Mail address set below.', 'paypal-framework' ); ?>
 							</small>
 						</td>
 					</tr>
 					<tr valign="top">
 						<th scope="row">
 							<label for="<?php echo $this->_optionsName; ?>_debugging_email">
-								<a title="<?php _e('Click for Help!'); ?>" href="#" onclick="jQuery('#pp_debugging_email').toggle(); return false;">
-									<?php _e('Debugging E-Mail:') ?>
-								</a>
+								<?php _e('Debugging E-Mail:', 'paypal-framework') ?>
 							</label>
 						</th>
 						<td>
-							<input type="text" name="<?php echo $this->_optionsName; ?>[debugging_email]" value="<?php echo attribute_escape($this->_settings['debugging_email']); ?>" id="<?php echo $this->_optionsName; ?>_version" class="regular-text" />
-							<small id="pp_debugging_email" style="display:none;">
-								This is a comma separated list of E-Mail
-								addresses that will receive the debug messages.
+							<input type="text" name="<?php echo $this->_optionsName; ?>[debugging_email]" value="<?php echo esc_attr($this->_settings['debugging_email']); ?>" id="<?php echo $this->_optionsName; ?>_version" class="regular-text" />
+							<small>
+								<?php _e( 'This is a comma separated list of E-Mail addresses that will receive the debug messages.', 'paypal-framework' ); ?>
 							</small>
 						</td>
 					</tr>
 					<tr valign="top">
 						<th scope="row">
-							<a title="<?php _e('Click for Help!'); ?>" href="#" onclick="jQuery('#pp_legacy_support').toggle(); return false;">
-								<?php _e('Legacy hash_call() support:') ?>
-							</a>
+							<?php _e('Legacy hash_call() support:', 'paypal-framework') ?>
 						</th>
 						<td>
 							<input type="radio" name="<?php echo $this->_optionsName; ?>[legacy_support]" value="on" id="<?php echo $this->_optionsName; ?>_legacy_support-on"<?php checked('on', $this->_settings['legacy_support']); ?> />
-							<label for="<?php echo $this->_optionsName; ?>_legacy_support-on"><?php _e('On'); ?></label><br />
+							<label for="<?php echo $this->_optionsName; ?>_legacy_support-on"><?php _e('On', 'paypal-framework'); ?></label><br />
 							<input type="radio" name="<?php echo $this->_optionsName; ?>[legacy_support]" value="off" id="<?php echo $this->_optionsName; ?>_legacy_support-off"<?php checked('off', $this->_settings['legacy_support']); ?> />
-							<label for="<?php echo $this->_optionsName; ?>_legacy_support-off"><?php _e('Off'); ?></label><br />
-							<small id="pp_legacy_support" style="display:none;">
-								The new function for seding NVP API calls to
-								PayPal if hashCall().  If your scripts still use
-								the old hash_call() and you don't want to update
-								them, enable this.  <em>This could conflict with
-								an existing hash_call function if you have it
-								defined elsewhere.</em>
+							<label for="<?php echo $this->_optionsName; ?>_legacy_support-off"><?php _e('Off', 'paypal-framework'); ?></label><br />
+							<small>
+								<?php echo sprintf( __( 'The new function for sending NVP API calls to PayPal is %1$s.  If your scripts still use the old %2$s and you don\'t want to update them, enable this.  <em>This could conflict with an existing %2$s function if you have it defined elsewhere.</em>', 'paypal-framework'), 'hashCall()', 'hash_call()' ); ?>
+								<?php echo sprintf( __( 'The new function for sending NVP API calls to PayPal is %1$s.  If your scripts still use the old %2$s and you don\'t want to update them, enable this.  <em>This could conflict with an existing %2$s function if you have it defined elsewhere.</em>', 'paypal-framework'), 'hashCall()', 'hash_call()' ); ?>
 							</small>
 						</td>
 					</tr>
 					<tr valign="top">
 						<th scope="row">
-							<a title="<?php _e('Click for Help!'); ?>" href="#" onclick="jQuery('#pp_listener_url').toggle(); return false;">
-								<?php _e('PayPal IPN Listener URL:') ?>
-							</a>
+							<?php _e('PayPal IPN Listener URL:', 'paypal-framework'); ?>
 						</th>
 						<td>
 							<?php echo get_bloginfo('url').'/?'.$this->_listener_query_var.'='.urlencode($this->_listener_query_var_value); ?>
-							<div id="pp_listener_url" style="display:none;">
-								<p><?php _e('To set this in your PayPal account:'); ?></p>
-								<ol style="list-style-type:decimal;">
-									<li>
-										<?php _e('Click <strong>Profile</strong> on the <strong>My Account</strong> tab.'); ?>
-									</li>
-									<li>
-										<?php _e('Click <strong>Instant Payment Notification Preferences</strong> in the Selling Preferences column.'); ?>
-									</li>
-									<li>
-										<?php _e("Click <strong>Edit IPN Settings</strong> to specify your listener's URL and activate the listener."); ?>
-									</li>
-									<li>
-										<?php _e('Copy/Paste the URL shown above into the Notification URL field.'); ?>
-									</li>
-									<li>
-										<?php _e('Click Receive IPN messages (Enabled) to enable your listener.'); ?>
-									</li>
-									<li>
-										<?php _e('Click <strong>Save</strong>.'); ?>
-									</li>
-									<li>
-										<?php _e("You're Done!  If you want, you can click <strong>Back to Profile Summary</strong> to return to the Profile after activating your listener."); ?>
-									</li>
-								</ol>
-							</div>
+							<?php $this->_show_help( 'listener' ); ?>
 						</td>
 					</tr>
 				</table>
 				<p class="submit">
-					<input type="submit" name="Submit" value="<?php _e('Update Options &raquo;'); ?>" />
+					<input type="submit" name="Submit" value="<?php _e('Update Options &raquo;', 'paypal-framework'); ?>" />
 				</p>
 			</form>
 		</div>
 <?php
+	}
+
+	private function _show_help( $help ) {
+		echo '<span class="help" title="' . __( 'Click for help', 'paypal-framework' ) . '">' . __( 'Help', 'paypal-framework' ) . '</span>';
+		switch ( $help ) {
+			case 'live':
+				?>
+					<ol class="hide-if-js">
+						<li>
+							<?php echo sprintf( __('You must have a PayPal business account.  If you do not have one, <a href="%s">sign up for one</a>.', 'paypal-framework'), 'https://www.paypal.com/us/mrb/pal=TJ287296FD8KW'); ?>
+						</li>
+						<li>
+							<?php echo sprintf( __('You must have a PayPal Website Payment Pro.  If you do not have one, <a href="%s">sign up for it</a>.', 'paypal-framework'), 'https://www.paypal.com/us/cgi-bin/webscr?cmd=_wp-pro-overview'); ?>
+						</li>
+						<li>
+							<?php echo sprintf( __("If you will be doing any recurring payments, you must have PayPal's Direct Payments Recurring Payments.  If you do not have it set up, please <a href='%s'>set it up</a>.", 'paypal-framework' ), 'https://www.paypal.com/cgi-bin/webscr?cmd=xpt/cps/general/DPRPLaunch-outside'); ?>
+						</li>
+						<li>
+							<?php _e('Lastly, you need to generate new API Credentials: In your PayPal account go to "My Account" -> "Profile" -> "Request API credentials" -> "PayPal API" -> "Set up PayPal API credentials and permissions".  If asked, you want to request an "API signature" not a certificate.  All the data that you are given should easily fit in this form.', 'paypal-framework'); ?>
+						</li>
+					</ol>
+				<?php
+				break;
+			case 'sandbox':
+				?>
+					<p class="hide-if-js">
+						<?php echo sprintf(__('You must have a <a href="%s">PayPal sandbox account</a>.', 'paypal-framework'), 'https://developer.paypal.com/'); ?>
+					</p>
+				<?php
+				break;
+			case 'listener':
+				?>
+					<div class="hide-if-js">
+						<p><?php _e('To set this in your PayPal account:', 'paypal-framework'); ?></p>
+						<ol>
+							<li>
+								<?php _e('Click <strong>Profile</strong> on the <strong>My Account</strong> tab.', 'paypal-framework'); ?>
+							</li>
+							<li>
+								<?php _e('Click <strong>Instant Payment Notification Preferences</strong> in the Selling Preferences column.', 'paypal-framework'); ?>
+							</li>
+							<li>
+								<?php _e("Click <strong>Edit IPN Settings</strong> to specify your listener's URL and activate the listener.", 'paypal-framework'); ?>
+							</li>
+							<li>
+								<?php _e('Copy/Paste the URL shown above into the Notification URL field.', 'paypal-framework'); ?>
+							</li>
+							<li>
+								<?php _e('Click Receive IPN messages (Enabled) to enable your listener.', 'paypal-framework'); ?>
+							</li>
+							<li>
+								<?php _e('Click <strong>Save</strong>.', 'paypal-framework'); ?>
+							</li>
+							<li>
+								<?php _e("You're Done!  If you want, you can click <strong>Back to Profile Summary</strong> to return to the Profile after activating your listener.", 'paypal-framework'); ?>
+							</li>
+						</ol>
+					</div>
+				<?php
+				break;
+		}
 	}
 
 	/**
@@ -522,9 +466,8 @@ class wpPayPalFramework
 	 * @return string NVP string
 	 */
 	public function makeNVP( $reqArray, $sep = '&' ) {
-		if ( !is_array($reqArray) ) {
+		if ( !is_array($reqArray) )
 			return $reqArray;
-		}
 		return http_build_query( $reqArray, '', $sep );
 	}
 
@@ -541,31 +484,28 @@ class wpPayPalFramework
 			'timeout' 	=> 30,
 		);
 
-		/**
-		 * @todo Use only wp_remote_post() once we only support 2.7+
-		 */
 		// Send the request
-		if ( !function_exists('wp_remote_post') ) {
-			require_once('http.php');
-		}
 		$resp = wp_remote_post( $this->_endpoint[$this->_settings['sandbox']], $params );
 
 		// If the response was valid, decode it and return it.  Otherwise return a WP_Error
 		if ( !is_wp_error($resp) && $resp['response']['code'] >= 200 && $resp['response']['code'] < 300 ) {
 			// Used for debugging.
-			if ( $this->_settings['debugging'] == 'on' && !empty($this->_settings['debugging_email']) ) {
-				$request = $this->_sanitizeRequest($params['body']);
-				wp_mail($this->_settings['debugging_email'], 'PayPal Framework - hashCall sent successfully', "Request:\r\n".print_r($request, true)."\r\n\r\nResponse:\r\n".print_r(wp_parse_args($resp['body']), true));
-			}
+			$request = $this->_sanitizeRequest($params['body']);
+			$message = __( 'Request:', 'paypal-framework' );
+			$message .= "\r\n".print_r($request, true)."\r\n\r\n";
+			$message .= __( 'Response:', 'paypal-framework' );
+			$message .= "\r\n".print_r(wp_parse_args( $resp['body'] ), true)."\r\n\r\n";
+			$this->_debug_mail( _( 'PayPal Framework - hashCall sent successfully', 'paypal-framework' ), $message );
 			return wp_parse_args($resp['body']);
 		} else {
-			if ( $this->_settings['debugging'] == 'on' && !empty($this->_settings['debugging_email']) ) {
-				$request = $this->_sanitizeRequest($params['body']);
-				wp_mail($this->_settings['debugging_email'], 'PayPal Framework - hashCall failed', "Request:\r\n".print_r($request, true)."\r\n\r\nResponse:\r\n".print_r($resp, true));
-			}
-			if ( !is_wp_error($resp) ) {
+			$request = $this->_sanitizeRequest($params['body']);
+			$message = __( 'Request:', 'paypal-framework' );
+			$message .= "\r\n".print_r($request, true)."\r\n\r\n";
+			$message .= __( 'Response:', 'paypal-framework' );
+			$message .= "\r\n".print_r($resp, true)."\r\n\r\n";
+			$this->_debug_mail( __( 'PayPal Framework - hashCall failed', 'paypal-framework' ), $message );
+			if ( !is_wp_error($resp) )
 				$resp = new WP_Error('http_request_failed', $resp['response']['message'], $resp['response']);
-			}
 			return $resp;
 		}
 	}
@@ -576,9 +516,12 @@ class wpPayPalFramework
 		 * E-Mails we send
 		 */
 		if ( $this->_settings['sandbox'] != 'sandbox' ) {
-			$request['ACCT']	= str_repeat('*', strlen($request['ACCT'])-4) . substr($request['ACCT'], -4);
-			$request['EXPDATE']	= str_repeat('*', strlen($request['EXPDATE']));
-			$request['CVV2']	= str_repeat('*', strlen($request['CVV2']));
+			if ( !empty( $request['ACCT'] ) )
+				$request['ACCT']	= str_repeat('*', strlen($request['ACCT'])-4) . substr($request['ACCT'], -4);
+			if ( !empty( $request['EXPDATE'] ) )
+				$request['EXPDATE']	= str_repeat('*', strlen($request['EXPDATE']));
+			if ( !empty( $request['CVV2'] ) )
+				$request['CVV2']	= str_repeat('*', strlen($request['CVV2']));
 		}
 		return $request;
 	}
@@ -604,10 +547,9 @@ class wpPayPalFramework
 		if (get_query_var( $this->_listener_query_var ) == $this->_listener_query_var_value) {
 			$_POST = stripslashes_deep($_POST);
 			// Try to validate the response to make sure it's from PayPal
-			if ($this->_validateMessage()) {
-				// If the message validated, process it.
+			if ($this->_validateMessage())
 				$this->_processMessage();
-			}
+
 			// Stop WordPress entirely
 			exit;
 		}
@@ -626,6 +568,12 @@ class wpPayPalFramework
 		$this->_settings['debugging_email'] = implode(',', $this->_settings['debugging_email']);
 	}
 
+	private function _debug_mail( $subject, $message ) {
+		// Used for debugging.
+		if ( $this->_settings['debugging'] == 'on' && !empty($this->_settings['debugging_email']) )
+			wp_mail( $this->_settings['debugging_email'], $subject, $message );
+	}
+
 	/**
 	 * Validate the message by checking with PayPal to make sure they really
 	 * sent it
@@ -639,32 +587,27 @@ class wpPayPalFramework
 			'body' => $_POST
 		);
 
-		/**
-		 * @todo Use only wp_remote_post() once we only support 2.7+
-		 */
 		// Send the request
-		if ( !function_exists('wp_remote_post') ) {
-			require_once('http.php');
-		}
 		$resp = wp_remote_post( $this->_url[$this->_settings['sandbox']], $params );
 
 		// Put the $_POST data back to how it was so we can pass it to the action
-		unset($_POST['cmd']);
+		unset( $_POST['cmd'] );
+		$message = __('URL:', 'paypal-framework' );
+		$message .= "\r\n".print_r($this->_url[$this->_settings['sandbox']], true)."\r\n\r\n";
+		$message .= __('Options:', 'paypal-framework' );
+		$message .= "\r\n".print_r($this->_settings, true)."\r\n\r\n";
+		$message .= __('Response:', 'paypal-framework' );
+		$message .= "\r\n".print_r($resp, true)."\r\n\r\n";
+		$message .= __('Post:', 'paypal-framework' );
+		$message .= "\r\n".print_r($_POST, true);
 
 		// If the response was valid, check to see if the request was valid
 		if ( !is_wp_error($resp) && $resp['response']['code'] >= 200 && $resp['response']['code'] < 300 && (strcmp( $resp['body'], "VERIFIED") == 0)) {
-			// Used for debugging.
-			if ( $this->_settings['debugging'] == 'on' && !empty($this->_settings['debugging_email']) ) {
-				wp_mail($this->_settings['debugging_email'], 'IPN Listener Test - Validation Succeeded', "URL:\r\n".print_r($this->_url[$this->_settings['sandbox']], true)."\r\n\r\nOptions:\r\n".print_r($this->_settings, true)."\r\n\r\nResponse:\r\n".print_r($resp, true)."\r\n\r\nPost:\r\n".print_r($_POST, true));
-			}
+			$this->_debug_mail( __( 'IPN Listener Test - Validation Succeeded', 'paypal-framework' ), $message );
 			return true;
 		} else {
 			// If we can't validate the message, assume it's bad
-			// Used for debugging.
-			if ( $this->_settings['debugging'] == 'on' && !empty($this->_settings['debugging_email']) ) {
-				wp_mail($this->_settings['debugging_email'], 'IPN Listener Test - Validation Failed', "URL:\r\n".print_r($this->_url[$this->_settings['sandbox']], true)."\r\n\r\nOptions:\r\n".print_r($this->_settings, true)."\r\n\r\nResponse:\r\n".print_r($resp, true)."\r\n\r\nPost:\r\n".print_r($_POST, true));
-			}
-
+			$this->_debug_mail( __( 'IPN Listener Test - Validation Failed', 'paypal-framework' ), $message );
 			return false;
 		}
 	}
@@ -681,16 +624,17 @@ class wpPayPalFramework
 	 * Throw an action based off the transaction type of the message
 	 */
 	private function _processMessage() {
-		do_action("paypal-ipn", $_POST);
+		do_action( 'paypal-ipn', $_POST );
+		$actions = array( 'paypal-ipn' );
+		$subject = sprintf( __( 'IPN Listener Test - %s', 'paypal-framework' ), '_processMessage()' );
 		if ( !empty($_POST['txn_type']) ) {
-			$specificAction = " and paypal-{$_POST['txn_type']}";
 			do_action("paypal-{$_POST['txn_type']}", $_POST);
+			$actions[] = "paypal-{$_POST['txn_type']}";
 		}
-
-		// Used for debugging.
-		if ( $this->_settings['debugging'] == 'on' && !empty($this->_settings['debugging_email']) ) {
-			wp_mail($this->_settings['debugging_email'], 'IPN Listener Test - _processMessage()', "Actions thrown: paypal-ipn{$specificAction}\r\n\r\nPassed to action:\r\n".print_r($_POST, true));
-		}
+		$message = sprintf( __( 'Actions thrown: %s', 'paypal-framework' ), implode( ', ', $actions ) );
+		$message .= "\r\n\r\n";
+		$message .= sprintf( __( 'Passed to actions: %s', 'paypal-framework' ), "\r\n" . print_r($_POST, true) );
+		$this->_debug_mail( $subject, $message );
 	}
 }
 

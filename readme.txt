@@ -2,11 +2,11 @@
 Contributors: aaroncampbell
 Donate link: https://www.paypal.com/cgi-bin/webscr?cmd=_xclick&business=paypal%40xavisys%2ecom&item_name=PayPal%20Framework&no_shipping=0&no_note=1&tax=0&currency_code=USD&lc=US&bn=PP%2dDonationsBF&charset=UTF%2d8
 Tags: paypal
-Requires at least: 2.6
-Tested up to: 2.8.4
-Stable tag: 1.0.5
+Requires at least: 2.8
+Tested up to: 3.1
+Stable tag: 1.0.7
 
-PayPal integration framework and admin interface as well as IPN listener.  Requires PHP5.
+PayPal integration framework and admin interface as well as IPN listener.
 
 == Description ==
 
@@ -40,31 +40,64 @@ You may also be interested in WordPress tips and tricks at <a href="http://wpinf
 To send a request to PayPal, simply build the request as an associative array and pass it to the hashCall helper function like this:
 <code>
 $ppParams = array(
-	'METHOD'			=> 'doDirectPayment',
-	'PAYMENTACTION'		=> 'Sale',
-	'IPADDRESS'			=> '123.123.123.123',
-	'AMT'				=> '222.22',
-	'DESC'				=> 'some product',
-	'CREDITCARDTYPE'	=> 'VISA',
-	'ACCT'				=> '4111111111111111',
-	'EXPDATE'			=> '112011',
-	'CVV2'				=> '123',
-	'FIRSTNAME'			=> 'Aaron',
-	'LASTNAME'			=> 'Campbell',
-	'EMAIL'				=> 'pptest@xavisys.com',
-	'STREET'			=> '123 some pl',
-	'STREET2'			=> '',
-	'CITY'				=> 'San Diego',
-	'STATE'				=> 'CA',
-	'ZIP'				=> '92101',
-	'COUNTRYCODE'		=> 'US',
-	'INVNUM'			=> '12345',
+	'METHOD'         => 'doDirectPayment',
+	'PAYMENTACTION'  => 'Sale',
+	'IPADDRESS'      => '123.123.123.123',
+	'AMT'            => '222.22',
+	'DESC'           => 'some product',
+	'CREDITCARDTYPE' => 'VISA',
+	'ACCT'           => '4111111111111111',
+	'EXPDATE'        => '112011',
+	'CVV2'           => '123',
+	'FIRSTNAME'      => 'Aaron',
+	'LASTNAME'       => 'Campbell',
+	'EMAIL'          => 'pptest@xavisys.com',
+	'STREET'         => '123 some pl',
+	'STREET2'        => '',
+	'CITY'           => 'San Diego',
+	'STATE'          => 'CA',
+	'ZIP'            => '92101',
+	'COUNTRYCODE'    => 'US',
+	'INVNUM'         => '12345',
 );
 
 $response = hashCall($ppParams);
 </code>
 
+= How do I use the Listener to process PayPal messages? =
+
+First you have to tell PayPal to send message to the correct URL.  Go to the
+PayPal Framework settings page and click the "PayPal IPN Listener URL" link to
+see instructions on how to use the URL that's listed there.  Once your PayPal
+account has been set up the listener will automatically process all IPN messages
+and turn them into WordPress actions that you can hook into.  You can use the
+'paypal-ipn' action to look at every message you ever get, or hook directly into
+a 'paypal-{transaction-type}' hook to process a specific type of message:
+<code>
+add_action('paypal-ipn', 'my_process_ipn');
+function my_process_ipn( $data ) {
+	echo 'Processing IPN Message:<pre>';
+	var_dump( $data );
+	echo '</pre>';
+}
+
+add_action('paypal-recurring_payment_failed', 'my_process_ipn_recurring_payment_failed');
+function my_process_ipn_recurring_payment_failed( $data ) {
+	echo 'A recurring payment has failed. Here is the data I have to process this:<pre>';
+	var_dump( $data );
+	echo '</pre>';
+}
+</code>
+
 == Changelog ==
+
+= 1.0.7 =
+* Lots of code cleanup, some requiring WordPress 2.8+
+* Better help
+* Make translatable
+
+= 1.0.6 =
+* Fixed a bug that throws a warning for certain requests when in debugging mode.  Props Ken Bass <kbass@kenbass.com>
 
 = 1.0.5 =
 * Fixed a bug introduced in 1.0.4 that affected certain debug messages when not using the sandbox
