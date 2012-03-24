@@ -4,7 +4,7 @@ Donate link: https://www.paypal.com/cgi-bin/webscr?cmd=_xclick&business=paypal%4
 Tags: paypal
 Requires at least: 2.8
 Tested up to: 3.1
-Stable tag: 1.0.7
+Stable tag: 1.0.8
 
 PayPal integration framework and admin interface as well as IPN listener.
 
@@ -90,6 +90,9 @@ function my_process_ipn_recurring_payment_failed( $data ) {
 </code>
 
 == Changelog ==
+
+= 1.0.8 =
+* Fix missing quotes
 
 = 1.0.7 =
 * Lots of code cleanup, some requiring WordPress 2.8+

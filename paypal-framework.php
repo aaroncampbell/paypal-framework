@@ -3,7 +3,7 @@
  * Plugin Name: PayPal Framework
  * Plugin URI: http://bluedogwebservices.com/wordpress-plugin/paypal-framework/
  * Description: PayPal integration framework and admin interface as well as IPN listener.  Requires PHP5.
- * Version: 1.0.7
+ * Version: 1.0.8
  * Author: Aaron D. Campbell
  * Author URI: http://bluedogwebservices.com/
  * License: GPL
@@ -141,7 +141,7 @@ class wpPayPalFramework
 	}
 
 	public function init_locale() {
-		load_plugin_textdomain( paypal-framework, false, dirname( plugin_basename( __FILE__ ) ) . '/languages' );
+		load_plugin_textdomain( 'paypal-framework', false, dirname( plugin_basename( __FILE__ ) ) . '/languages' );
 	}
 
 	private function _getSettings() {
