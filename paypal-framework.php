@@ -141,7 +141,7 @@ class wpPayPalFramework
 	}
 
 	public function init_locale() {
-		load_plugin_textdomain( paypal-framework, false, dirname( plugin_basename( __FILE__ ) ) . '/languages' );
+		load_plugin_textdomain( 'paypal-framework', false, dirname( plugin_basename( __FILE__ ) ) . '/languages' );
 	}
 
 	private function _getSettings() {
