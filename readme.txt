@@ -4,7 +4,7 @@ Donate link: https://www.paypal.com/cgi-bin/webscr?cmd=_xclick&business=paypal%4
 Tags: paypal
 Requires at least: 2.8
 Tested up to: 3.1
-Stable tag: 1.0.8
+Stable tag: 1.0.9
 
 PayPal integration framework and admin interface as well as IPN listener.
 
@@ -89,7 +89,20 @@ function my_process_ipn_recurring_payment_failed( $data ) {
 }
 </code>
 
+= Why do you set sslverify to false? =
+
+Many servers have out of date certificate lists, so this is necessary to be as
+portable as possible.  However, if your server is set up right you can force
+sslverify like this:
+<code>
+add_filter( 'paypal_framework_sslverify', '__return_true' );
+</code>
+
 == Changelog ==
+
+= 1.0.9 =
+* Use admin-ajax for listener
+* Add sslverify filter - props @evansolomon
 
 = 1.0.8 =
 * Fix missing quotes

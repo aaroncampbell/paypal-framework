@@ -3,7 +3,7 @@
  * Plugin Name: PayPal Framework
  * Plugin URI: http://bluedogwebservices.com/wordpress-plugin/paypal-framework/
  * Description: PayPal integration framework and admin interface as well as IPN listener.  Requires PHP5.
- * Version: 1.0.8
+ * Version: 1.0.9
  * Author: Aaron D. Campbell
  * Author URI: http://bluedogwebservices.com/
  * License: GPL
@@ -120,7 +120,8 @@ class wpPayPalFramework
 		 */
 		add_action( 'admin_init', array($this,'registerOptions') );
 		add_action( 'admin_menu', array($this,'adminMenu') );
-		add_action( 'template_redirect', array( $this, 'listener' ) );
+		add_action( 'wp_ajax_nopriv_paypal_listener', array( $this, 'listener' ) );
+		add_action( 'template_redirect', array( $this, 'template_redirect' ) );
 		add_filter( 'query_vars', array( $this, 'addPaypalListenerVar' ) );
 		add_filter( 'init', array( $this, 'init_locale' ) );
 
@@ -362,7 +363,7 @@ class wpPayPalFramework
 							<?php _e('PayPal IPN Listener URL:', 'paypal-framework'); ?>
 						</th>
 						<td>
-							<?php echo get_bloginfo('url').'/?'.$this->_listener_query_var.'='.urlencode($this->_listener_query_var_value); ?>
+							<?php echo add_query_arg( array( 'action' => 'paypal_listener' ), admin_url('admin-ajax.php') ); ?>
 							<?php $this->_show_help( 'listener' ); ?>
 						</td>
 					</tr>
@@ -480,7 +481,7 @@ class wpPayPalFramework
 	public function hashCall( $args ) {
 		$params = array(
 			'body'		=> $this->_prepRequest($args),
-			'sslverify' => false,
+			'sslverify' => apply_filters( 'paypal_framework_sslverify', false ),
 			'timeout' 	=> 30,
 		);
 
@@ -538,21 +539,24 @@ class wpPayPalFramework
 		exit;
 	}
 
+	public function template_redirect() {
+		// Check that the query var is set and is the correct value.
+		if ( get_query_var( $this->_listener_query_var ) == $this->_listener_query_var_value )
+			$this->listener();
+	}
+
 	/**
 	 * This is our listener.  If the proper query var is set correctly it will
 	 * attempt to handle the response.
 	 */
 	public function listener() {
-		// Check that the query var is set and is the correct value.
-		if (get_query_var( $this->_listener_query_var ) == $this->_listener_query_var_value) {
-			$_POST = stripslashes_deep($_POST);
-			// Try to validate the response to make sure it's from PayPal
-			if ($this->_validateMessage())
-				$this->_processMessage();
+		$_POST = stripslashes_deep($_POST);
+		// Try to validate the response to make sure it's from PayPal
+		if ($this->_validateMessage())
+			$this->_processMessage();
 
-			// Stop WordPress entirely
-			exit;
-		}
+		// Stop WordPress entirely
+		exit;
 	}
 
 	/**
