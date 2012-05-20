@@ -91,6 +91,10 @@ function my_process_ipn_recurring_payment_failed( $data ) {
 
 == Changelog ==
 
+= 1.0.9 =
+* Use admin-ajax for listener
+* Add sslverify filter - props @evansolomon
+
 = 1.0.8 =
 * Fix missing quotes
 
