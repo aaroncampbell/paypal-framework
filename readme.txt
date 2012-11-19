@@ -4,7 +4,7 @@ Donate link: https://www.paypal.com/cgi-bin/webscr?cmd=_xclick&business=paypal%4
 Tags: paypal
 Requires at least: 2.8
 Tested up to: 3.1
-Stable tag: 1.0.9
+Stable tag: 1.0.10
 
 PayPal integration framework and admin interface as well as IPN listener.
 
@@ -29,9 +29,7 @@ You may also be interested in WordPress tips and tricks at <a href="http://wpinf
 
 == Installation ==
 
-1. Verify that you have PHP5, which is required for this plugin.
-1. Upload the whole `paypal-framework` directory to the `/wp-content/plugins/` directory
-1. Activate the plugin through the 'Plugins' menu in WordPress
+1. Use automatic installer.
 
 == Frequently Asked Questions ==
 
@@ -99,6 +97,9 @@ add_filter( 'paypal_framework_sslverify', '__return_true' );
 </code>
 
 == Changelog ==
+
+= 1.0.10 =
+* Replace instance of _() with __() - Props Ken Bass
 
 = 1.0.9 =
 * Use admin-ajax for listener
