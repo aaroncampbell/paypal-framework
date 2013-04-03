@@ -4,7 +4,7 @@ Donate link: https://www.paypal.com/cgi-bin/webscr?cmd=_xclick&business=paypal%4
 Tags: paypal
 Requires at least: 2.8
 Tested up to: 3.1
-Stable tag: 1.0.10
+Stable tag: 1.0.11
 
 PayPal integration framework and admin interface as well as IPN listener.
 
@@ -97,6 +97,9 @@ add_filter( 'paypal_framework_sslverify', '__return_true' );
 </code>
 
 == Changelog ==
+
+= 1.0.11 =
+* Don't verify SSL on validation calls - too many people with out of date CAs
 
 = 1.0.10 =
 * Replace instance of _() with __() - Props Ken Bass
