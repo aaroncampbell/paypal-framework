@@ -480,6 +480,8 @@ class wpPayPalFramework
 	 */
 	public function hashCall( $args ) {
 		$params = array(
+			'headers' => array( 'Host' => 'www.paypal.com' ),
+			'httpversion' => '1.1',
 			'body'		=> $this->_prepRequest($args),
 			'sslverify' => apply_filters( 'paypal_framework_sslverify', false ),
 			'timeout' 	=> 30,
@@ -588,6 +590,8 @@ class wpPayPalFramework
 
 		// We need to send the message back to PayPal just as we received it
 		$params = array(
+			'headers' => array( 'Host' => 'www.paypal.com' ),
+			'httpversion' => '1.1',
 			'body' => $_POST,
 			'sslverify' => apply_filters( 'paypal_framework_sslverify', false ),
 			'timeout' 	=> 30,
