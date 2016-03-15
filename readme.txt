@@ -99,7 +99,7 @@ add_filter( 'paypal_framework_sslverify', '__return_true' );
 == Changelog ==
 
 = 1.0.12 =
-* Add host and httpversion 1.1 to wp_remote_get(). Now required by PayPal Sandbox to support TLS 1.2. - props @cferdinandi
+* Add httpversion 1.1 to wp_remote_get(). Now required by PayPal Sandbox to support TLS 1.2. - props @cferdinandi
 
 = 1.0.11 =
 * Don't verify SSL on validation calls - too many people with out of date CAs
