@@ -3,7 +3,7 @@ Contributors: aaroncampbell
 Donate link: https://www.paypal.com/cgi-bin/webscr?cmd=_xclick&business=paypal%40xavisys%2ecom&item_name=PayPal%20Framework&no_shipping=0&no_note=1&tax=0&currency_code=USD&lc=US&bn=PP%2dDonationsBF&charset=UTF%2d8
 Tags: paypal
 Requires at least: 2.8
-Tested up to: 4.4.2
+Tested up to: 4.5.1
 Stable tag: 1.0.12
 
 PayPal integration framework and admin interface as well as IPN listener.
@@ -148,3 +148,4 @@ add_filter( 'paypal_framework_sslverify', '__return_true' );
 
 = 1.0.0 =
 * Original version released to wordpress.org repository
+
